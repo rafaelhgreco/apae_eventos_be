@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y supervisor postgresql postgresql-contri
 # Configurar o PostgreSQL
 USER postgres
 RUN /etc/init.d/postgresql start && \
-    createdb -O postgres springdb
+    createdb -O postgres panorama
 USER root
 
 # Configurar o Supervisor
