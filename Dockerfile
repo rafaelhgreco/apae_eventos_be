@@ -1,18 +1,23 @@
-FROM eclipse-temurin:17-jdk-alpine as build
-WORKDIR /workspace/app
+FROM openjdk:17-jdk-slim
 
-# Copiar arquivos de dependências e build primeiro (otimização de cache)
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-COPY src src
+# Instalar o supervisor (para gerenciar múltiplos processos)
+RUN apt-get update && apt-get install -y supervisor postgresql postgresql-contrib wget
 
-# Construir o jar sem testes
-RUN ./mvnw install -DskipTests
+# Configurar o PostgreSQL
+USER postgres
+RUN /etc/init.d/postgresql start && \
+    createdb -O postgres springdb
+USER root
 
-# Imagem de runtime
-FROM eclipse-temurin:24-jre-alpine
-VOLUME /tmp
-COPY --from=build /workspace/app/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app.jar"]
+# Configurar o Supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copiar o JAR do Spring Boot
+WORKDIR /app
+COPY target/*.jar app.jar
+
+# Expor portas
+EXPOSE 8080 5432
+
+# Iniciar o Supervisor (que controlará PostgreSQL e Spring Boot)
+CMD ["/usr/bin/supervisord"]
